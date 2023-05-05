@@ -49,12 +49,6 @@ class Model(nn.Module):
         self.args = args
 
     def forward(self, input_ids=None, labels=None):
-        # print("in")
-        # print(input_ids.shape)
-        # print(labels.shape)
-        # eos_mask = input_ids.eq(self.config.eos_token_id)
-        # print(eos_mask.shape)
-        # input_ids = input_ids.view(-1, self.args.block_size)
         if self.args.model_type == "roberta":
             input_ids = input_ids.view(-1, self.args.block_size)
             outputs = self.encoder(input_ids=input_ids, attention_mask=input_ids.ne(self.tokenizer.pad_token_id))[0]
@@ -73,29 +67,17 @@ class Model(nn.Module):
             outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask,
                                    labels=input_ids, decoder_attention_mask=attention_mask, output_hidden_states=True)
             hidden_states = outputs['decoder_hidden_states'][-1]
-            # print(hidden_states.shape)
-            # hidden_states = hidden_states.reshape(-1, self.args.block_size * 2, self.config.d_model)
-            # print(hidden_states)
             eos_mask = input_ids.eq(self.config.eos_token_id)
-            # print(eos_mask.shape)
             if len(torch.unique(eos_mask.sum(1))) > 1:
                 raise ValueError("All examples must have the same number of <eos> tokens.")
-            # print("out")
-
             outputs = hidden_states[eos_mask, :].view(hidden_states.size(0), -1, hidden_states.size(-1))
-            # print(outputs.shape)
-
             outputs = outputs[:, -1, :]
-            # print(outputs.shape)
-            # outputs = outputs.reshape(-1, self.args.block_size * 2, self.config.d_model)
 
             logits = self.classifier(outputs)
             prob = F.softmax(logits, dim=-1)
-            # print(prob.shape)
+
             if labels is not None:
                 loss_fct = CrossEntropyLoss()
-                # print(logits.shape)
-                # print(labels.shape)
                 loss = loss_fct(logits, labels)
                 return loss, prob
             else:
