@@ -10,7 +10,10 @@ and fine-tuning scripts in [`downstream_tasks`](downstream_tasks) are listed in 
 All datasets, pre-trained models and fine-tuned models can be downloaded here: 
 [Baidu Netdisk](https://pan.baidu.com/s/10Upa_z3UBKo7cJmx0Aw45g?pwd=lhpz).
 
-the structure of
+It contains ptm, dataset, checkpoints folders. 
+The ptm contains all the continued pre-trained models for each baseline.
+The dataset contains dataset for pre-training, code search, and defect detection.
+The checkpoints contains all the fine-tuned models according to tasks and baselines.
 
 
 ## Runs
@@ -18,4 +21,4 @@ the structure of
 Run `run_mask.py` to start continued pre-training. 
 All arguments are located in it, specific whatever you need.
 
-Some example scripts are as listed in each downstream task directory.
+For fine-tuning, some example scripts are as listed in each downstream task directory.
