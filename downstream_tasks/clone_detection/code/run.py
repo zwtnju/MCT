@@ -172,8 +172,17 @@ class TextDataset(Dataset):
                 else:
                     label = 1
                 data.append((url1, url2, label, tokenizer, args, cache, url_to_code))
-        if 'test' not in postfix:
-            data = random.sample(data, int(len(data) * 0.1))
+
+        if 'valid' in postfix:
+            if args.data_num == -1:
+                data = random.sample(data, int(len(data) * 0.1))
+            else:
+                data = random.sample(data, 10000)
+        if 'train' in postfix:
+            if args.data_num == -1:
+                data = random.sample(data, int(len(data) * 0.1))
+            else:
+                data = random.sample(data, args.data_num)
 
         self.examples = pool.map(get_example, tqdm(data, total=len(data)))
         if 'train' in postfix:
@@ -192,9 +201,30 @@ class TextDataset(Dataset):
         return torch.tensor(self.examples[item].input_ids), torch.tensor(self.examples[item].label)
 
 
-def load_and_cache_examples(args, tokenizer, evaluate=False, test=False, pool=None):
-    dataset = TextDataset(tokenizer, args, file_path=args.test_data_file if test else (
-        args.eval_data_file if evaluate else args.train_data_file), block_size=args.block_size, pool=pool)
+def load_and_cache_examples(args, tokenizer, split_tag="train", pool=None):
+    if not os.path.exists(args.cache_path):
+        os.makedirs(args.cache_path)
+    if split_tag == "train" or split_tag == "eval":
+        cache_fn = '{}/{}.pt'.format(args.cache_path,
+                                     split_tag + '_all' if args.data_num == -1 else split_tag + '_%d' % args.data_num)
+    else:
+        cache_fn = '{}/{}.pt'.format(args.cache_path, 'test_all')
+
+    if os.path.exists(cache_fn):
+        logger.info("Load cache data from %s", cache_fn)
+        dataset = torch.load(cache_fn)
+    else:
+        if split_tag == "train":
+            file_path = args.train_data_file
+        elif split_tag == "eval":
+            file_path = args.eval_data_file
+        else:
+            file_path = args.test_data_file
+        dataset = TextDataset(tokenizer, args, file_path=file_path, block_size=args.block_size, pool=pool)
+
+        if args.local_rank in [-1, 0]:
+            torch.save(dataset, cache_fn)
+
     return dataset
 
 
@@ -345,7 +375,7 @@ def train(args, train_dataset, model, tokenizer, pool):
 def evaluate(args, model, tokenizer, prefix="", pool=None, eval_when_training=False):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = args.output_dir
-    eval_dataset = load_and_cache_examples(args, tokenizer, evaluate=True, pool=pool)
+    eval_dataset = load_and_cache_examples(args, tokenizer, split_tag="eval", pool=pool)
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
 
@@ -418,7 +448,7 @@ def evaluate(args, model, tokenizer, prefix="", pool=None, eval_when_training=Fa
 
 def test(args, model, tokenizer, prefix="", pool=None, best_threshold=0):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
-    eval_dataset = load_and_cache_examples(args, tokenizer, test=True, pool=pool)
+    eval_dataset = load_and_cache_examples(args, tokenizer, split_tag="test", pool=pool)
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -636,7 +666,7 @@ def main():
         if args.local_rank not in [-1, 0]:
             torch.distributed.barrier()  # Barrier to make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-        train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, pool=pool)
+        train_dataset = load_and_cache_examples(args, tokenizer, split_tag="train", pool=pool)
 
         if args.local_rank == 0:
             torch.distributed.barrier()
