@@ -224,7 +224,7 @@ def load_and_cache_examples(args, tokenizer, split_tag="train", pool=None):
 
         if args.local_rank in [-1, 0]:
             torch.save(dataset, cache_fn)
-
+            logger.info("Save cache data to %s", cache_fn)
     return dataset
 
 
@@ -469,7 +469,7 @@ def test(args, model, tokenizer, prefix="", pool=None, best_threshold=0):
     model.eval()
     logits = []
     y_trues = []
-    for batch in eval_dataloader:
+    for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
         inputs = batch[0].to(args.device)
         labels = batch[1].to(args.device)
         with torch.no_grad():
@@ -582,6 +582,10 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
+
+    # Additional parameters for sampling
+    parser.add_argument("--cache_path", type=str, required=True)
+    parser.add_argument("--data_num", default=-1, type=int)
 
     pool = multiprocessing.Pool(cpu_cont)
     args = parser.parse_args()

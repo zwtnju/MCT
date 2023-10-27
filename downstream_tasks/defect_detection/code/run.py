@@ -100,7 +100,12 @@ class TextDataset(Dataset):
             for line in f:
                 js = json.loads(line.strip())
                 self.examples.append(convert_examples_to_features(js, tokenizer, args))
+
         if 'train' in file_path:
+
+            if not args.data_num == -1:
+                self.examples = random.sample(self.examples, args.data_num)
+
             for idx, example in enumerate(self.examples[:3]):
                 logger.info("*** Example ***")
                 logger.info("idx: {}".format(idx))
@@ -113,6 +118,33 @@ class TextDataset(Dataset):
 
     def __getitem__(self, i):
         return torch.tensor(self.examples[i].input_ids), torch.tensor(self.examples[i].label)
+
+
+def load_and_cache_examples(args, tokenizer, split_tag="train"):
+    if not os.path.exists(args.cache_path):
+        os.makedirs(args.cache_path)
+    if split_tag == "train" or split_tag == "eval":
+        cache_fn = '{}/{}.pt'.format(args.cache_path,
+                                     split_tag + '_all' if args.data_num == -1 else split_tag + '_%d' % args.data_num)
+    else:
+        cache_fn = '{}/{}.pt'.format(args.cache_path, 'test_all')
+
+    if os.path.exists(cache_fn):
+        logger.info("Load cache data from %s", cache_fn)
+        dataset = torch.load(cache_fn)
+    else:
+        if split_tag == "train":
+            file_path = args.train_data_file
+        elif split_tag == "eval":
+            file_path = args.eval_data_file
+        else:
+            file_path = args.test_data_file
+        dataset = TextDataset(tokenizer, args, file_path=file_path)
+
+        if args.local_rank in [-1, 0]:
+            torch.save(dataset, cache_fn)
+            logger.info("Save cache data to %s", cache_fn)
+    return dataset
 
 
 def set_seed(seed=42):
@@ -259,7 +291,7 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = args.output_dir
 
-    eval_dataset = TextDataset(tokenizer, args, args.eval_data_file)
+    eval_dataset = load_and_cache_examples(args, tokenizer, split_tag="eval")
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
@@ -308,7 +340,7 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
 
 def test(args, model, tokenizer):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
-    eval_dataset = TextDataset(tokenizer, args, args.test_data_file)
+    eval_dataset = load_and_cache_examples(args, tokenizer, split_tag="test")
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -442,6 +474,10 @@ def main():
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
 
+    # Additional parameters for sampling
+    parser.add_argument("--cache_path", type=str, required=True)
+    parser.add_argument("--data_num", default=-1, type=int)
+
     args = parser.parse_args()
 
     # Setup distant debugging if needed
@@ -524,7 +560,7 @@ def main():
         if args.local_rank not in [-1, 0]:
             torch.distributed.barrier()  # Barrier to make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-        train_dataset = TextDataset(tokenizer, args, args.train_data_file)
+        train_dataset = load_and_cache_examples(args, tokenizer, split_tag="train")
         if args.local_rank == 0:
             torch.distributed.barrier()
 
