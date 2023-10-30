@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 
@@ -595,8 +596,16 @@ def data_collator_fn(batch, tokenizer, args):
     token_type_ids = torch.LongTensor(token_type_ids)
     labels = torch.LongTensor(labels)
 
+    # logging.info(input_ids.shape)
+    # logging.info(attention_masks.shape)
+    # logging.info(token_type_ids.shape)
+    # logging.info(labels.shape)
+    # logging.info(torch.Size([args.train_batch_size, args.max_seq_len]))
+
     assert input_ids.shape == attention_masks.shape == token_type_ids.shape == \
-           labels.shape == torch.Size([args.train_batch_size, args.max_seq_len]), f"batch embedding error"
+           labels.shape, f"batch embedding error"
+
+    # == torch.Size([args.train_batch_size, args.max_seq_len]) for multi-gpu
 
     batch_dict = {
         'input_ids': input_ids,

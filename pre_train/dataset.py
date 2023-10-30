@@ -183,3 +183,14 @@ class CodeMAEDataset(Dataset):
     def subset(self, ratio):
         indices = random.sample(range(self.size), int(self.size * ratio))
         return Subset(self, indices)
+
+
+def generate_original_dataset():
+    data_dir = data_utils.pretrain_lang_dir_list()
+    train_data = CodeMAEDataset(['.' + x for x in data_dir], is_train='all')
+    train_file = open("train_data.pkl", "wb")
+    pickle.dump(train_data, train_file)
+    train_file.close()
+
+
+generate_original_dataset()

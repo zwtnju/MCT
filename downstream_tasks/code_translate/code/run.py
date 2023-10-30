@@ -64,21 +64,6 @@ class Example(object):
         self.target = target
 
 
-# def read_examples(filename):
-#     """Read examples from filename."""
-#     examples=[]
-#     with open(filename,encoding="utf-8") as f:
-#         for idx,js in enumerate(json.load(f)):
-#             source=' '.join(js['old_comment_tokens'])
-#             target=' '.join(js['new_comment_tokens'])      
-#             examples.append(
-#                 Example(
-#                         idx = idx,
-#                         source=source,
-#                         target=target,
-#                         ) 
-#             )
-#     return examples
 def read_examples(filename):
     """Read examples from filename."""
     examples = []
@@ -447,18 +432,12 @@ def main():
                 logger.info("  Num examples = %d", len(eval_examples))
                 logger.info("  Batch size = %d", args.eval_batch_size)
 
-                # Start Evaling model
+                # Start eval model
                 model.eval()
                 eval_loss, batch_num = 0, 0
                 for batch in eval_dataloader:
                     batch = tuple(t.to(device) for t in batch)
                     source_ids, source_mask, target_ids, target_mask = batch
-
-                    # with torch.no_grad():
-                    #     _, loss, num = model(source_ids=source_ids, source_mask=source_mask,
-                    #                          target_ids=target_ids, target_mask=target_mask)
-                    # eval_loss += loss.sum().item()
-                    # tokens_num += num.sum().item()
 
                     if args.model_type == 'roberta':
                         loss, _, _ = model(source_ids=source_ids, source_mask=source_mask,
@@ -483,24 +462,10 @@ def main():
                     logger.info("  %s = %s", key, str(result[key]))
                 logger.info("  " + "*" * 20)
 
-                # save last checkpoint
-                # last_output_dir = os.path.join(args.output_dir, 'checkpoint-last')
-                # if not os.path.exists(last_output_dir):
-                #     os.makedirs(last_output_dir)
-                # model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-                # output_model_file = os.path.join(last_output_dir, "pytorch_model.bin")
-                # torch.save(model_to_save.state_dict(), output_model_file)
                 if eval_loss < best_loss:
                     logger.info("  Best ppl:%s", round(np.exp(eval_loss), 5))
                     logger.info("  " + "*" * 20)
                     best_loss = eval_loss
-                    # Save best checkpoint for best ppl
-                    # output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl')
-                    # if not os.path.exists(output_dir):
-                    #     os.makedirs(output_dir)
-                    # model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-                    # output_model_file = os.path.join(output_dir, "pytorch_model.bin")
-                    # torch.save(model_to_save.state_dict(), output_model_file)
 
                     # Calculate bleu
                 if 'dev_bleu' in dev_dataset:
@@ -522,33 +487,7 @@ def main():
                 for batch in eval_dataloader:
                     batch = tuple(t.to(device) for t in batch)
                     source_ids, source_mask = batch
-                    # with torch.no_grad():
-                    #     if args.model_type == 'roberta':
-                    #         preds = model(source_ids=source_ids, source_mask=source_mask)
-                    #         for pred in preds:
-                    #             t = pred[0].cpu().numpy()
-                    #             t = list(t)
-                    #             if 0 in t:
-                    #                 t = t[:t.index(0)]
-                    #             text = tokenizer.decode(t, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-                    #             p.append(text)
-                    #     else:
-                    #         if hasattr(model, 'module'):
-                    #             preds = model.module.generate(source_ids,
-                    #                                           attention_mask=source_mask,
-                    #                                           use_cache=True,
-                    #                                           num_beams=args.beam_size,
-                    #                                           early_stopping=args.task == 'summarize',
-                    #                                           max_length=args.max_target_length)
-                    #         else:
-                    #             preds = model.generate(source_ids,
-                    #                                    attention_mask=source_mask,
-                    #                                    use_cache=True,
-                    #                                    num_beams=args.beam_size,
-                    #                                    early_stopping=args.task == 'summarize',
-                    #                                    max_length=args.max_target_length)
-                    #         text = list(preds.cpu().numpy())
-                    #         p.append(text)
+
                     with torch.no_grad():
                         if args.model_type == 'roberta':
                             preds = model(source_ids=source_ids, source_mask=source_mask)
@@ -588,17 +527,7 @@ def main():
                 dev_em = round(np.mean(accs) * 100, 4)
                 logger.info("  %s = %s " % ("xMatch", str(dev_em)))
                 logger.info("  " + "*" * 20)
-                # if dev_bleu > best_bleu:
-                #     logger.info("  Best bleu:%s", dev_bleu)
-                #     logger.info("  " + "*" * 20)
-                #     best_bleu = dev_bleu
-                #     # Save best checkpoint for best bleu
-                #     output_dir = os.path.join(args.output_dir, 'checkpoint-best-bleu')
-                #     if not os.path.exists(output_dir):
-                #         os.makedirs(output_dir)
-                #     model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-                #     output_model_file = os.path.join(output_dir, "pytorch_model.bin")
-                #     torch.save(model_to_save.state_dict(), output_model_file)
+
                 if dev_em > best_em:
                     logger.info("  Best em:%s", dev_em)
                     logger.info("  " + "*" * 20)
@@ -613,8 +542,7 @@ def main():
 
     if args.do_test:
         files = []
-        # if args.dev_filename is not None:
-        #     files.append(args.dev_filename)
+
         if args.test_filename is not None:
             files.append(args.test_filename)
         for idx, file in enumerate(files):
@@ -634,15 +562,7 @@ def main():
             for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
                 batch = tuple(t.to(device) for t in batch)
                 source_ids, source_mask = batch
-                # with torch.no_grad():
-                #     preds = model(source_ids=source_ids, source_mask=source_mask)
-                #     for pred in preds:
-                #         t = pred[0].cpu().numpy()
-                #         t = list(t)
-                #         if 0 in t:
-                #             t = t[:t.index(0)]
-                #         text = tokenizer.decode(t, clean_up_tokenization_spaces=False)
-                #         p.append(text)
+
                 with torch.no_grad():
                     if args.model_type == 'roberta':
                         preds = model(source_ids=source_ids, source_mask=source_mask)

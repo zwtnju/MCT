@@ -79,6 +79,14 @@ if __name__ == "__main__":
                         help="mask type of code, including iden, const, var, func, str")
     parser.add_argument('--total_mask_type', type=str, default='',
                         help="mask type of code")
+
+    # add adapter
+    parser.add_argument("--do_adapter", action='store_true', help="Whether to use adapter in model.")
+    parser.add_argument('--adapter_name', type=str, default='pre_train_adapter', help="Adapter name for each layer.")
+    parser.add_argument("--adapter_type", type=str, default="parallel", help="Adapter type to use.")
+    parser.add_argument("--adapter_file", type=str, default=None,
+                        help="Optional directory to store the pre-trained adapter.")
+
     # print arguments
     args = parser.parse_args()
 

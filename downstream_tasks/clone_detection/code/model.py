@@ -39,13 +39,15 @@ class Model(nn.Module):
         self.tokenizer = tokenizer
         if args.model_type == "roberta":
             self.classifier = RobertaClassificationHead(config)
-        else:
+        elif args.model_type == "plbart":
             self.classifier = PLBartClassificationHead(
                 config.d_model,
                 config.d_model,
                 config.num_labels,
                 config.classifier_dropout,
             )
+        else:
+            self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.args = args
 
     def forward(self, input_ids=None, labels=None):
@@ -53,16 +55,7 @@ class Model(nn.Module):
             input_ids = input_ids.view(-1, self.args.block_size)
             outputs = self.encoder(input_ids=input_ids, attention_mask=input_ids.ne(self.tokenizer.pad_token_id))[0]
 
-            logits = self.classifier(outputs)
-            prob = F.softmax(logits, dim=-1)
-            if labels is not None:
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits, labels)
-                return loss, prob
-            else:
-                return prob
-
-        elif self.args.model_type == "plbart":
+        else:
             attention_mask = input_ids.ne(self.tokenizer.pad_token_id)
             outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask,
                                    labels=input_ids, decoder_attention_mask=attention_mask, output_hidden_states=True)
@@ -73,12 +66,12 @@ class Model(nn.Module):
             outputs = hidden_states[eos_mask, :].view(hidden_states.size(0), -1, hidden_states.size(-1))
             outputs = outputs[:, -1, :]
 
-            logits = self.classifier(outputs)
-            prob = F.softmax(logits, dim=-1)
+        logits = self.classifier(outputs)
+        prob = F.softmax(logits, dim=-1)
 
-            if labels is not None:
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits, labels)
-                return loss, prob
-            else:
-                return prob
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits, labels)
+            return loss, prob
+        else:
+            return prob
