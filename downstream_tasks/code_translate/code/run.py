@@ -43,12 +43,22 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           PLBartForConditionalGeneration)
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)}
+                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
+                 'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 }
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def get_model_size(model, required=True):
+    if required:
+        model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        model_size = sum(p.numel() for p in model.parameters())
+    return "{}M".format(round(model_size / 1e+6))
 
 
 class Example(object):
@@ -129,7 +139,8 @@ def convert_examples_to_features(examples, tokenizer, args, stage=None):
             target_ids += [tokenizer.pad_token_id] * padding_length
             target_mask += [0] * padding_length
         else:
-            assert "codebert" in args.model_name_or_path or "plbart" in args.model_name_or_path, f"model error"
+            assert "codebert" in args.model_name_or_path or "plbart" in args.model_name_or_path \
+                   or "codet5" in args.model_name_or_path, f"model error"
             # source
             source_tokens = tokenizer.tokenize(example.source)[:args.max_source_length - 2]
             source_tokens = [tokenizer.cls_token] + source_tokens + [tokenizer.sep_token]
@@ -278,6 +289,12 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
+
+    # Additional parameters
+    parser.add_argument("--do_adapter", action='store_true', help="Whether to use adapter in model.")
+    parser.add_argument('--adapter_name', type=str, default='c_adapter', help="Adapter name for each layer.")
+    parser.add_argument('--mask_type', type=str, default='default')
+
     # print arguments
     args = parser.parse_args()
     logger.info(args)
@@ -305,7 +322,7 @@ def main():
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.config_name else args.model_name_or_path,
                                                 do_lower_case=args.do_lower_case)
 
-    # budild model
+    # build model
     if args.model_type == "roberta":
         encoder = model_class.from_pretrained(args.model_name_or_path, config=config)
         decoder_layer = nn.TransformerDecoderLayer(d_model=config.hidden_size, nhead=config.num_attention_heads)
@@ -314,11 +331,27 @@ def main():
                         beam_size=args.beam_size, max_length=args.max_target_length,
                         sos_id=tokenizer.cls_token_id, eos_id=tokenizer.sep_token_id)
     else:
-        model = model_class.from_pretrained(args.model_name_or_path, config=config)
+        if args.do_adapter:
+            if args.mask_type == "s":
+                args.adapter_name = "s_adapter"
+            logger.info('used adapter layer: {}'.format(args.adapter_name))
+            logger.info("reload results from {}".format(args.model_name_or_path))
+
+            model = model_class.from_pretrained(args.model_name_or_path, config=config)
+
+            assert args.adapter_name in model.config.adapters, "adapter misuse error: {}".format(model.config)
+            model.set_active_adapters(args.adapter_name)
+
+        else:
+            model = model_class.from_pretrained(args.model_name_or_path, config=config)
 
     if args.load_model_path is not None:
         logger.info("reload model from {}".format(args.load_model_path))
         model.load_state_dict(torch.load(args.load_model_path))
+
+    num_param = get_model_size(model)
+    num_total_param = get_model_size(model, required=False)
+    logger.info('Number of total parameters: {}, tunable parameters: {}'.format(num_total_param, num_param))
 
     model.to(device)
     if args.local_rank != -1:
