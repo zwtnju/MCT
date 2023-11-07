@@ -30,18 +30,27 @@ import numpy as np
 from tqdm import tqdm
 
 from model import Model
-from torch.nn import CrossEntropyLoss, MSELoss
-from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler, TensorDataset
-from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
-                          RobertaConfig, RobertaModel, RobertaTokenizer, PLBartModel, T5Model)
-from transformers import (RobertaConfig, RobertaTokenizer,
-                          PLBartConfig, PLBartTokenizer, PLBartForConditionalGeneration,
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler
+
+from transformers import (AdamW, get_linear_schedule_with_warmup, RobertaConfig, RobertaTokenizer,
+                          PLBartConfig, PLBartTokenizer, PLBartModel,
                           T5Config, T5ForConditionalGeneration, RobertaModel)
 
 logger = logging.getLogger(__name__)
 
 MODEL_CLASSES = {'codebert': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 'plbart': (PLBartConfig, PLBartModel, PLBartTokenizer)}
+                 'plbart': (PLBartConfig, PLBartModel, PLBartTokenizer),
+                 'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 }
+
+
+def get_model_size(model, required=True):
+    if required:
+        model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        model_size = sum(p.numel() for p in model.parameters())
+    return "{}M".format(round(model_size / 1e+6))
 
 
 class InputFeatures(object):
@@ -346,6 +355,12 @@ def main():
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--model_type', type=str, required=True)
+
+    # Additional parameters
+    parser.add_argument("--do_adapter", action='store_true', help="Whether to use adapter in model.")
+    parser.add_argument('--adapter_name', type=str, default='c_adapter', help="Adapter name for each layer.")
+    parser.add_argument('--mask_type', type=str, default='default')
+
     # print arguments
     args = parser.parse_args()
     # set log
@@ -364,10 +379,27 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
     config = config_class.from_pretrained(args.model_name_or_path)
-    model = model_class.from_pretrained(args.model_name_or_path, config=config)
+
+    if args.do_adapter:
+        if args.mask_type == "s":
+            args.adapter_name = "s_adapter"
+        logger.info('used adapter layer: {}'.format(args.adapter_name))
+        logger.info("reload results from {}".format(args.model_name_or_path))
+
+        model = model_class.from_pretrained(args.model_name_or_path, config=config)
+
+        assert args.adapter_name in model.config.adapters, "adapter misuse error: {}".format(model.config)
+        model.set_active_adapters(args.adapter_name)
+
+    else:
+        model = model_class.from_pretrained(args.model_name_or_path, config=config)
 
     model = Model(model, args.model_type, tokenizer)
     logger.info("Training/evaluation parameters %s", args)
+
+    num_param = get_model_size(model)
+    num_total_param = get_model_size(model, required=False)
+    logger.info('Number of total parameters: {}, tunable parameters: {}'.format(num_total_param, num_param))
 
     model.to(args.device)
     if args.n_gpu > 1:
