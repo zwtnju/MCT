@@ -1,10 +1,13 @@
 model=codebert
+data_num=-1
 for mask_type in "base" "i" "ic" "is" "ics" \
                  "c" "cv" "cf" "cs" "cvf" \
                  "cvs" "cfs" "cvfs" "v" "vf" \
                  "vs" "vfs" "f" "fs" "s"
 do
     python run.py \
+        --cache_path=./cache_data/${data_num} \
+        --data_num=${data_num} \
         --output_dir=./saved_models/${model}/${mask_type} \
         --model_type=roberta \
         --model_name_or_path=../models/${model}/${mask_type} \
