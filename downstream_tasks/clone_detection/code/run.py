@@ -51,7 +51,8 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
                           RobertaConfig, RobertaModel, RobertaTokenizer,
                           DistilBertConfig, DistilBertForMaskedLM, DistilBertTokenizer, PLBartConfig,
-                          PLBartForSequenceClassification, PLBartTokenizer, PLBartForConditionalGeneration)
+                          PLBartTokenizer, PLBartForConditionalGeneration, T5Config,
+                          T5ForConditionalGeneration)
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,17 @@ MODEL_CLASSES = {
     'bert': (BertConfig, BertForMaskedLM, BertTokenizer),
     'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
     'distilbert': (DistilBertConfig, DistilBertForMaskedLM, DistilBertTokenizer),
-    'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)
+    'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
+    'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
 }
+
+
+def get_model_size(model, required=True):
+    if required:
+        model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        model_size = sum(p.numel() for p in model.parameters())
+    return "{}M".format(round(model_size / 1e+6))
 
 
 def get_example(item):
@@ -586,6 +596,8 @@ def main():
     # Additional parameters for sampling
     parser.add_argument("--cache_path", type=str, required=True)
     parser.add_argument("--data_num", default=-1, type=int)
+    parser.add_argument("--do_adapter", action='store_true', help="Whether to use adapter in model.")
+    parser.add_argument('--adapter_name', type=str, default='c_adapter', help="Adapter name for each layer.")
 
     pool = multiprocessing.Pool(cpu_cont)
     args = parser.parse_args()
@@ -652,12 +664,25 @@ def main():
         args.block_size = tokenizer.max_len_single_sentence  # Our input block size will be the max possible for the model
     args.block_size = min(args.block_size, tokenizer.max_len_single_sentence)
     if args.model_name_or_path:
-        model = model_class.from_pretrained(args.model_name_or_path,
-                                            from_tf=bool('.ckpt' in args.model_name_or_path),
-                                            config=config,
-                                            cache_dir=args.cache_dir if args.cache_dir else None)
+        if args.do_adapter:
+
+            logger.info('used adapter layer: {}'.format(args.adapter_name))
+            logger.info("reload results from {}".format(args.model_name_or_path))
+            model = model_class.from_pretrained(args.model_name_or_path, config=config)
+            assert args.adapter_name in model.config.adapters, "adapter misuse error"
+            model.set_active_adapters(args.adapter_name)
+
+        else:
+            model = model_class.from_pretrained(args.model_name_or_path,
+                                                from_tf=bool('.ckpt' in args.model_name_or_path),
+                                                config=config,
+                                                cache_dir=args.cache_dir if args.cache_dir else None)
     else:
         model = model_class(config)
+
+    num_param = get_model_size(model)
+    num_total_param = get_model_size(model, required=False)
+    logger.info('Number of total parameters: {}, tunable parameters: {}'.format(num_total_param, num_param))
 
     model = Model(model, config, tokenizer, args)
     if args.local_rank == 0:
