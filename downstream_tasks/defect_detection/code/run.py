@@ -52,7 +52,7 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
                           RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer,
                           DistilBertConfig, DistilBertForMaskedLM, DistilBertTokenizer, T5Config, PLBartConfig,
-                          T5ForConditionalGeneration, PLBartForSequenceClassification, PLBartTokenizer, ParallelConfig)
+                          T5ForConditionalGeneration, PLBartForSequenceClassification, PLBartTokenizer)
 
 logger = logging.getLogger(__name__)
 
