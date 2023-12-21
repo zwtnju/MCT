@@ -11,13 +11,12 @@ All datasets, pre-trained models and fine-tuned models can be downloaded here:
 [Baidu Netdisk](https://pan.baidu.com/s/10Upa_z3UBKo7cJmx0Aw45g?pwd=lhpz).
 
 It contains ptm, dataset, checkpoints folders. 
-
 The ptm contains all the continued pre-trained models for each baseline.
-
 The dataset contains dataset for pre-training (train_data.pkl), code search, and defect detection.
-
 The checkpoints contain all the fine-tuned models according to tasks and baselines.
 
+The dataset can also be downloaded from [Google Drive](https://drive.google.com/file/d/1--pIY37DciKmvjIhGmQXzJB8CuYBz00m/view?usp=sharing). 
+However, due to space limitations, we are temporarily unable to provide ptm and checkpoints on Google Drive.
 
 ## Runs
 
