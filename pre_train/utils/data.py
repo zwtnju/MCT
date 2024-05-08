@@ -27,6 +27,151 @@ def failed_code_dir():
     return args.err_dir
 
 
+# https://docs.oracle.com/javase/specs/jls/se22/html/jls-3.html#jls-3.7
+# ['abstract', 'continue', 'for', 'new', 'switch', 'assert', 'default', 'if', 'package',
+#                         'synchronized', 'boolean', 'do', 'goto', 'private', 'this', 'break', 'double', 'implements',
+#                         'protected', 'throw', 'byte', 'else', 'import', 'public', 'throws', 'case', 'enum',
+#                         'instanceof', 'return', 'transient', 'catch', 'extends', 'int', 'short', 'try', 'char',
+#                         'final', 'interface', 'static', 'void', 'class', 'finally', 'long', 'strictfp', 'volatile',
+#                         'const', 'float', 'native', 'super', 'while',
+#                         'exports', 'opens', 'requires', 'uses', 'yield', 'module', 'permits', 'sealed', 'var',
+#                         'non-sealed', 'provides', 'to', 'when', 'open', 'record', 'transitive', 'with'],
+
+# https://docs.python.org/zh-cn/3/reference/lexical_analysis.html#keywords
+# False      await      else       import     pass
+# None       break      except     in         raise
+# True       class      finally    is         return
+# and        continue   for        lambda     try
+# as         def        from       nonlocal   while
+# assert     del        global     not        with
+# async      elif       if         or         yield
+
+# go     https://go.dev/ref/spec#Keywords
+# java   https://www.w3schools.com/java/java_ref_keywords.asp
+# js     https://www.w3schools.com/js/js_reserved.asp
+# php    https://www.w3schools.com/php/php_ref_keywords.asp
+# python https://www.w3schools.com/python/python_ref_keywords.asp
+# ruby   https://docs.ruby-lang.org/en/3.3/keywords_rdoc.html
+def get_keywords_list():
+    kw_list = {
+        'go': [
+            'break', 'default', 'func', 'interface', 'select', 'case', 'defer', 'go', 'map', 'struct',
+            'chan', 'else', 'goto', 'package', 'switch', 'const', 'fallthrough', 'if', 'range', 'type',
+            'continue', 'for', 'import', 'return', 'var'
+        ],
+        'java': [
+            'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'continue',
+            'default', 'do', 'double', 'else', 'enum', 'exports', 'extends', 'final', 'finally', 'float',
+            'for', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'module',
+            'native', 'new', 'package', 'private', 'protected', 'public', 'requires', 'return', 'short',
+            'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient',
+            'try', 'var', 'void', 'volatile', 'while'
+        ],
+        'javascript': [
+            'abstract', 'arguments', 'await*', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+            '	class*', 'const*', 'continue', 'debugger', 'default', 'delete', 'do', 'double',
+            'else', 'enum*', 'eval', 'export*', 'extends*', 'false', 'final', 'finally', 'float',
+            'for', 'function', 'goto', 'if', 'implements', 'import*', 'in', 'instanceof', 'int',
+            'interface', 'let*', 'long', 'native', 'new', 'null', 'package', 'private', 'protected',
+            'public', 'return', 'short', 'static', 'super*', 'switch', 'synchronized', 'this',
+            'throw', 'throws', 'transient', 'true', 'try', 'typeof', 'var', 'void', 'volatile',
+            'while', 'with', 'yield'
+        ],
+        'php': [
+            'abstract', 'and', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const',
+            'continue', 'declare', 'default', 'do', 'echo', 'else', 'elseif', 'empty', 'enddeclare',
+            'endfor', 'endforeach', 'endif', 'endswitch', 'endwhile', 'extends', 'final', 'finally', 'fn',
+            'for', 'foreach', 'function', 'global', 'goto', 'if', 'implements', 'include', 'include_once',
+            'instanceof', 'insteadof', 'interface', 'isset', 'list', 'namespace', 'new', 'or', 'print',
+            'private', 'protected', 'public', 'require', 'require_once', 'return', 'static', 'switch',
+            'throw', 'trait', 'try', 'unset', 'use', 'var', 'while', 'xor', 'yield', 'yield from'
+        ],
+        'python': [
+            'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except',
+            'False', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None',
+            'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
+        ],
+        'ruby': [
+            '__ENCODING__', '__LINE__', '__FILE__', 'BEGIN', 'END', 'alias', 'and', 'begin', 'break', 'case',
+            'class', 'def', 'defined?', 'do', 'else', 'elsif', 'end', 'ensure', 'false', 'for', 'if', 'in',
+            'module', 'next', 'nil', 'not', 'or', 'redo', 'rescue', 'retry', 'return', 'self', 'super', 'then',
+            'true', 'undef', 'unless', 'until', 'when', 'while', 'yield'
+        ],
+    }
+
+    return kw_list
+
+
+# https://go.dev/ref/spec#Operators_and_punctuation
+# ['+', '&', '+=', '&=', '&&', '==', '!=', '(', ')', '-', '|', '-=', '|=', '||', '<', '<=', '[', ']', '*',
+#                '^', '*=', '^=', '<-', '>', '>=', '{', '}', '/', '<<', '/=', '<<=', '++', '=', ':=', ',', ';', '%',
+#                '>>', '%=', '>>=', '--', '!', '...', '.', ':', '&^', '&^=', '~']
+
+# go     https://www.runoob.com/go/go-operators.html
+# java   https://www.runoob.com/java/java-operators.html
+# js     https://www.runoob.com/jsref/jsref-operators.html
+# php    https://www.runoob.com/php/php-operators.html
+# python https://www.runoob.com/python/python-operators.html
+# ruby   https://www.runoob.com/ruby/ruby-operator.html
+def get_operator_list():
+    op_list = {
+        'go': [
+            '+', '-', '*', '/', '%', '++', '--',
+            '==', '!=', '>', '<', '>=', '<=',
+            '&&', '||', '!',
+            '＆', '|', '^', '〜', '<<', '>>',
+            '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=',
+            '(', ')', '[', ']', '{', '}',
+            ':', ';', ',', ':=', '--', '!', '...', '.',
+        ],
+        'java': [
+            '+', '-', '*', '/', '%', '++', '--',
+            '==', '!=', '>', '<', '>=', '<=',
+            '＆', '|', '^', '〜', '<<', '>>', '>>>',
+            '&&', '||', '!',
+            '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=',
+            '(', ')', '[', ']', '{', '}',
+            ':', ';', '.', '?',
+        ],
+        'javascript': [
+            '+', '-', '*', '/', '%', '++', '--',
+            '=', '+=', '-=', '*=', '/=', '%=',
+            '==', '===', '!=', '!==', '>', '<', '>=', '<=',
+            '&&', '||', '!',
+            '＆', '|', '^', '〜', '<<', '>>',
+            '(', ')', '[', ']', '{', '}',
+            ':', ';', '.', '?',
+        ],
+        'php': [
+            '+', '-', '*', '/', '%', '~', '.', '++', '--',
+            '=', '+=', '-=', '*=', '/=', '%=', '.=',
+            '==', '===', '!=', '<>', '!==', '>', '<', '>=', '<=',
+            '&&', '||', '!',
+            '(', ')', '[', ']', '{', '}',
+            ':', ';', '?', '$',
+        ],
+        'python': [
+            '+', '-', '*', '/', '%', '**', '//',
+            '==', '!=', '<>', '>', '<', '>=', '<=',
+            '=', '+=', '-=', '*=', '/=', '%=', '**=', '//=',
+            '＆', '|', '^', '〜', '<<', '>>',
+            '(', ')', '[', ']', '{', '}',
+            ':', '.'
+        ],
+        'ruby': [
+            '+', '-', '*', '/', '%', '**',
+            '==', '!=', '>', '<', '>=', '<=', '<=>', '===',
+            '=', '+=', '-=', '*=', '/=', '%=', '**=',
+            '＆', '|', '^', '〜', '<<', '>>',
+            '&&', '||', '!',
+            '(', ')', '[', ']', '{', '}',
+            ':', '.', '?', '::'
+        ],
+    }
+
+    return op_list
+
+
 def data_split_list():
     return ['train', 'valid', 'test']
 

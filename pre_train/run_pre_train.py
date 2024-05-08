@@ -7,9 +7,12 @@ from transformers import (RobertaConfig, RobertaTokenizer, RobertaForMaskedLM,
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, IntervalStrategy
 
 from data_collator_bpe import data_collator_fn
-from adapter import getAdapter, get_model_size
+
+# from adapter import getAdapter, get_model_size
 
 MODEL_CLASSES = {'codebert': (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
+                 'graphcodebert': (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
+                 'unixcoder': (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
                  'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
                  'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)}
 
@@ -17,6 +20,14 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def get_model_size(model, required=True):
+    if required:
+        model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        model_size = sum(p.numel() for p in model.parameters())
+    return "{}M".format(round(model_size / 1e+6))
 
 
 def pre_train(args):
@@ -37,27 +48,27 @@ def pre_train(args):
     else:
         model = model_class.from_pretrained(args.model_name_or_path, config=config)
 
-    # add adapter
-    if args.do_adapter:
-        adapter_config = getAdapter(args.adapter_type)
+    # # add adapter
+    # if args.do_adapter:
+    #     adapter_config = getAdapter(args.adapter_type)
+    #
+    #     if args.adapter_file:
+    #         model.load_adapter(args.adapter_file)
+    #     else:
+    #         # task adapter - only add if not existing
+    #         if args.adapter_name not in model.config.adapters:
+    #             # add a new adapter
+    #             model.add_adapter(args.adapter_name, config=adapter_config)
+    #         # Enable adapter training
+    #     model.train_adapter(args.adapter_name)
+    #     model.set_active_adapters(args.adapter_name)
+    #
+    #     logger.info('Used Adapter: {}'.format(args.adapter_type))
 
-        if args.adapter_file:
-            model.load_adapter(args.adapter_file)
-        else:
-            # task adapter - only add if not existing
-            if args.adapter_name not in model.config.adapters:
-                # add a new adapter
-                model.add_adapter(args.adapter_name, config=adapter_config)
-            # Enable adapter training
-        model.train_adapter(args.adapter_name)
-        model.set_active_adapters(args.adapter_name)
-
-        logger.info('Used Adapter: {}'.format(args.adapter_type))
-
-        logger.info("Training/evaluation parameters %s", args)
-        num_param = get_model_size(model)
-        num_total_param = get_model_size(model, required=False)
-        logger.info('Number of total parameters: {}, tunable parameters: {}'.format(num_total_param, num_param))
+    logger.info("Training/evaluation parameters %s", args)
+    num_param = get_model_size(model)
+    num_total_param = get_model_size(model, required=False)
+    logger.info('Number of total parameters: {}, tunable parameters: {}'.format(num_total_param, num_param))
 
     # trainer
     training_args = Seq2SeqTrainingArguments(

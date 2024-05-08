@@ -96,7 +96,9 @@ class CodeMAEDataset(Dataset):
 
         self.is_train = is_train
 
-        for valid_code_file, valid_doc_file, mask_var_str_code_file, mask_function_call_str_code_file, mask_identifier_str_code_file, mask_str_code_file, code_vars_file, code_function_call_file, code_identifier_file, code_strings_file in zip(
+        for valid_code_file, valid_doc_file, mask_var_str_code_file, mask_function_call_str_code_file, \
+            mask_identifier_str_code_file, mask_str_code_file, code_vars_file, code_function_call_file, \
+            code_identifier_file, code_strings_file in zip(
                 valid_codes_dir, valid_docs_dir, mask_var_str_codes_dir, mask_function_call_str_codes_dir,
                 mask_identifier_str_codes_dir, mask_str_codes_dir, codes_vars_dir, codes_function_calls_dir,
                 codes_identifiers_dir, codes_strings_dir):
@@ -192,5 +194,4 @@ def generate_original_dataset():
     pickle.dump(train_data, train_file)
     train_file.close()
 
-
-generate_original_dataset()
+# generate_original_dataset()

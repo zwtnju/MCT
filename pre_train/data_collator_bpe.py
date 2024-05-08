@@ -17,7 +17,7 @@ def mask_random(doc, lang, code_mask_str, code_strings, tokenizer, args):
     vocab_size = tokenizer.vocab_size
 
     doc_tokens = tokenizer.tokenize(doc)[:args.max_nl_len]
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         str_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
                       tokenizer.tokenize(code_mask_str) + [tokenizer.eos_token])[:args.max_seq_len]
         token_type_ids = ([0] * (len(doc_tokens) + 2) + [1] * args.max_seq_len)[:args.max_seq_len]
@@ -77,7 +77,7 @@ def mask_random(doc, lang, code_mask_str, code_strings, tokenizer, args):
 
 def mask_constant(doc, lang, code_mask_str, code_strings, code_mask_identifier, code_identifiers,
                   tokenizer, args):
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder' or args.model_type == 'codet5':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder', 'codet5']:
         special_split_symbol = 'Ġ'
     elif args.model_type == 'plbart':
         special_split_symbol = '▁'
@@ -99,7 +99,7 @@ def mask_constant(doc, lang, code_mask_str, code_strings, code_mask_identifier, 
 
     doc_tokens = tokenizer.tokenize(doc)[:args.max_nl_len]
 
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         var_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
                       tokenizer.tokenize(code_mask_var))[:args.max_seq_len - 1] + [tokenizer.eos_token]
         str_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
@@ -127,7 +127,7 @@ def mask_constant(doc, lang, code_mask_str, code_strings, code_mask_identifier, 
     input_ids = str_ids
     attention_mask = str_mask
 
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         label_tokens = str_tokens[:]
     else:
         if len(str_tokens) == args.max_seq_len:
@@ -278,7 +278,7 @@ def mask_string(doc, lang, code_mask_str, code_strings, tokenizer, args):
     vocab_size = tokenizer.vocab_size
 
     doc_tokens = tokenizer.tokenize(doc)[:args.max_nl_len]
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         str_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
                       tokenizer.tokenize(code_mask_str))[:args.max_seq_len - 1] + [tokenizer.eos_token]
         token_type_ids = ([0] * (len(doc_tokens) + 2) + [1] * args.max_seq_len)[:args.max_seq_len]
@@ -295,7 +295,7 @@ def mask_string(doc, lang, code_mask_str, code_strings, tokenizer, args):
     input_ids = str_ids
     attention_mask = str_mask
 
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         label_tokens = str_tokens[:]
     else:
         if len(str_tokens) == args.max_seq_len:
@@ -346,7 +346,7 @@ def mask_string(doc, lang, code_mask_str, code_strings, tokenizer, args):
 
 
 def mask_nonrandom(doc, lang, code_mask_str, code_strings, code_mask_var, code_variables, tokenizer, args):
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder' or args.model_type == 'codet5':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder', 'codet5']:
         special_split_symbol = 'Ġ'
     elif args.model_type == 'plbart':
         special_split_symbol = '▁'
@@ -368,7 +368,7 @@ def mask_nonrandom(doc, lang, code_mask_str, code_strings, code_mask_var, code_v
 
     doc_tokens = tokenizer.tokenize(doc)[:args.max_nl_len]
 
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         var_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
                       tokenizer.tokenize(code_mask_var))[:args.max_seq_len - 1] + [tokenizer.eos_token]
         str_tokens = ([tokenizer.cls_token] + doc_tokens + [tokenizer.sep_token] +
@@ -393,7 +393,7 @@ def mask_nonrandom(doc, lang, code_mask_str, code_strings, code_mask_var, code_v
     input_ids = str_ids
     attention_mask = str_mask
 
-    if args.model_type == 'codebert' or args.model_type == 'unixcoder':
+    if args.model_type in ['codebert', 'graphcodebert', 'unixcoder']:
         label_tokens = str_tokens[:]
     else:
         if len(str_tokens) == args.max_seq_len:

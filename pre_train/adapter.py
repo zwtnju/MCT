@@ -6,12 +6,7 @@ from transformers import HoulsbyInvConfig, PfeifferConfig, ParallelConfig, \
 logger = logging.getLogger(__name__)
 
 
-def get_model_size(model, required=True):
-    if required:
-        model_size = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    else:
-        model_size = sum(p.numel() for p in model.parameters())
-    return "{}M".format(round(model_size / 1e+6))
+
 
 
 def getAdapter(adapter_type):
